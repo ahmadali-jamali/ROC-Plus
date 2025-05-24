@@ -42,7 +42,7 @@ def create_roc_with_grouped_outliers(num_cliques, clique_size):
         random_node = random.choice(candidates)
         G.add_edge(random_node, outlier_node)
 
-        # Optionally connect outliers in a ring
+        # Optionally connect outliers in a ring (add new link)
         if i < num_cliques - 1:
             G.add_edge(outlier_node, (i + 1) * clique_size)
         else:
@@ -55,13 +55,14 @@ G_roc, labels_roc = create_roc_with_grouped_outliers(num_cliques, clique_size)
 labels_array = np.array([labels_roc[node] for node in G_roc.nodes()])
 unique_label_count = len(set(labels_array))
 
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Algorithm
 # >>>>>>>Function to run clustering multiple times
 def run_clustering(G, labels, num_runs):
     results = pd.DataFrame({'Node': list(G.nodes()), 'True_Label': labels})
     nmi_aff, nmi_kmeans, nmi_dbscan, nmi_som = [], [], [], []
 
     for run in range(num_runs):
-        #creat the Node2Vec
+        # create the Node2Vec
         node2vec = Node2Vec(G, dimensions=64, walk_length=30, num_walks=200, workers=4)
         model = node2vec.fit(window=10, min_count=1, batch_words=4)
         embeddings = np.array([model.wv[str(node)] for node in G.nodes()])
@@ -78,13 +79,6 @@ def run_clustering(G, labels, num_runs):
         results[f'Run_{run+1}_Affinity'] = pred_labels_aff
         nmi_aff.append(normalized_mutual_info_score(labels, pred_labels_aff))
         print(f'Run {run+1} NMI Score (Affinity): {nmi_aff[-1]:.4f}')
-
-        # KMeans clustering>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        kmeans = KMeans(n_clusters=unique_label_count, random_state=run, n_init=10)
-        pred_labels_kmeans = kmeans.fit_predict(embeddings)
-        results[f'Run_{run+1}_KMeans'] = pred_labels_kmeans
-        nmi_kmeans.append(normalized_mutual_info_score(labels, pred_labels_kmeans))
-        print(f'Run {run+1} NMI Score (KMeans): {nmi_kmeans[-1]:.4f}')
 
         # DBSCAN clustering>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         dbscan = DBSCAN(eps=1.4, min_samples=5, metric='euclidean')
@@ -107,14 +101,8 @@ def run_clustering(G, labels, num_runs):
         nmi_som.append(normalized_mutual_info_score(labels, pred_labels_som))
         print(f'Run {run+1} NMI Score (SOM): {nmi_som[-1]:.4f}')
 
-    # Save 
-    nmi_row = pd.DataFrame([['NMI', ''] + nmi_aff + nmi_kmeans + nmi_dbscan + nmi_som],
-                           columns=list(results.columns[:2]) + list(results.columns[2:]))
-    results = pd.concat([results, nmi_row], ignore_index=True)
     print('mean nmi score (Affinity):', np.mean(nmi_aff))
     print('std nmi score (Affinity):', np.std(nmi_aff))
-    print('mean nmi score (KMeans):', np.mean(nmi_kmeans))
-    print('std nmi score (KMeans):', np.std(nmi_kmeans))
     print('mean nmi score (DBSCAN):', np.mean(nmi_dbscan))
     print('std nmi score (DBSCAN):', np.std(nmi_dbscan))
     print('mean nmi score (SOM):', np.mean(nmi_som))
@@ -123,8 +111,6 @@ def run_clustering(G, labels, num_runs):
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 df_results = run_clustering(G_roc, labels_array, num_runs=30)
-df_results.to_csv('30-30_Roc+s-node2vec_affinity_kmeans_dbscan_som_results.csv', index=False)
-print("Results saved to 15-50_Roc+s-node2vec_affinity_kmeans_dbscan_som_results.csv")
 
 # >>>>>>>> Plotting
 pos = nx.spring_layout(G_roc, seed=42)
