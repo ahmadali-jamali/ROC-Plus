@@ -11,7 +11,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 from minisom import MiniSom
 from sklearn.preprocessing import MinMaxScaler
 
-
+#Code with example of ROC+L to test other data, change the data or add your network
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>ROC+L
 num_cliques = 15  # Number of cliques
 clique_size = 30 # Nodes per clique
